@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5학년 과학: 산과 염기 지시약 실험</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        #app-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+        .well-plate {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            background-color: #e0e7ff; /* 홈판 배경색 */
+            border-radius: 10px;
+            position: relative;
+            margin: 0 auto;
+            max-width: 600px; /* 홈판 전체 너비 제한 */
+        }
+        .well-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        /* 이름표 스타일: 노란 박스 형태 */
+        .well-label {
+            padding: 4px 10px;
+            border-radius: 6px; /* 둥근 모서리 */
+            background-color: #fffacb; /* 연한 노랑 배경 */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: absolute;
+            font-size: 1.1rem; /* 글씨체 확대 */
+            font-weight: bold;
+            color: #1a202c; /* 짙은 색 */
+            white-space: nowrap;
+            line-height: 1.2;
+            text-align: center;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5; /* 홈판 위에 오도록 */
+        }
+        /* 윗줄 이름표 위치 */
+        .well-wrapper:nth-child(-n+3) .well-label {
+            top: -45px; /* 홈 위에 배치 */
+        }
+        /* 아랫줄 이름표 위치 */
+        .well-wrapper:nth-child(n+4) .well-label {
+            bottom: -45px; /* 홈 아래에 배치 */
+        }
+
+        .well {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid #a7b7ff; /* 홈 테두리 */
+            background-color: #f8fafc; /* 기본 홈 색상 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; 
+            position: relative;
+            cursor: pointer;
+        }
+        .solution {
+            width: 95%;
+            height: 95%;
+            border-radius: 50%;
+            position: relative;
+            background-color: transparent; 
+            transition: background-color 0.5s ease-out; /* 페놀프탈레인 용액 변화 속도 */
+        }
+        .indicator-strip {
+            position: absolute;
+            width: 35px; /* 크기 확대 */
+            height: 105px; /* 크기 확대 */
+            background-color: #ffcccc; /* 붉은색 리트머스 종이 기본 */
+            border-radius: 3px;
+            pointer-events: none; 
+            z-index: 10;
+            display: none; 
+            transition: background 3s ease-in-out; /* 느린 색 변화를 위한 트랜지션 */
+        }
+        .phenolphthalein-dropper {
+            position: absolute;
+            width: 50px;
+            height: 100px;
+            /* SVG: 점적병 모양 */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><rect x="30" y="0" width="40" height="50" rx="10" ry="10" fill="%23a0a0a0"/><circle cx="50" cy="50" r="25" fill="%23a0a0a0"/><rect x="40" y="70" width="20" height="100" fill="%23cccccc"/><circle cx="50" cy="170" r="10" fill="%23cccccc"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            cursor: grab;
+            z-index: 20;
+            display: none;
+        }
+        /* 물방울 크기 2배 확대 (10px -> 20px) */
+        .drop-animation {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #b3e5fc; /* 연한 하늘색 물방울 */
+            position: absolute;
+            opacity: 0;
+            animation: dropFade 0.8s forwards;
+            pointer-events: none;
+        }
+        /* 물방울 애니메이션의 이동 거리도 크기에 맞게 조정 */
+        @keyframes dropFade {
+            0% { transform: translate(-50%, -20px); opacity: 1; } /* 시작 위치 조정 */
+            100% { transform: translate(-50%, 30px); opacity: 0; } /* 끝 위치 조정 */
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container" class="text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">🔬 산과 염기 지시약 실험 시뮬레이션</h1>
+        <p class="text-gray-600 mb-8">지시약을 홈판 용액에 넣어 색 변화를 관찰하고 용액의 성질을 분류해 보세요.</p>
+
+        <!-- 지시약 선택 버튼 -->
+        <div class="flex justify-center space-x-4 mb-10">
+            <button id="redLitmusBtn" class="px-6 py-3 bg-red-400 text-white font-semibold rounded-lg shadow-md hover:bg-red-500 transition duration-300">
+                붉은색 리트머스 종이
+            </button>
+            <button id="blueLitmusBtn" class="px-6 py-3 bg-blue-400 text-white font-semibold rounded-lg shadow-md hover:bg-blue-500 transition duration-300">
+                푸른색 리트머스 종이
+            </button>
+            <button id="phenolphthaleinBtn" class="px-6 py-3 bg-purple-400 text-white font-semibold rounded-lg shadow-md hover:bg-purple-500 transition duration-300">
+                페놀프탈레인 용액
+            </button>
+        </div>
+
+        <!-- 6홈판 -->
+        <div class="well-plate" id="wellPlate">
+            <!-- 윗 줄: 홈 위에 이름표 -->
+            <div class="well-wrapper">
+                <span class="well-label">식초</span>
+                <div class="well" id="well0"><div class="solution" data-type="acid"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">탄산수</span>
+                <div class="well" id="well1"><div class="solution" data-type="acid"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">석회수</span>
+                <div class="well" id="well2"><div class="solution" data-type="base"></div></div>
+            </div>
+            <!-- 아랫 줄: 홈 아래에 이름표 -->
+            <div class="well-wrapper">
+                <span class="well-label">묽은 염산</span>
+                <div class="well" id="well3"><div class="solution" data-type="acid"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">유리 세정제</span>
+                <div class="well" id="well4"><div class="solution" data-type="base"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">묽은 수산화 나트륨</span>
+                <div class="well" id="well5"><div class="solution" data-type="base"></div></div>
+            </div>
+        </div>
+
+        <!-- 메시지 및 초기화 버튼 -->
+        <div id="messageBox" class="text-red-500 mt-6 text-lg font-semibold h-7"></div>
+        <button id="resetBtn" class="mt-8 px-8 py-4 bg-gray-600 text-white text-xl font-bold rounded-full shadow-lg hover:bg-gray-700 transition duration-300">
+            처음으로
+        </button>
+    </div>
+
+    <script>
+        const wells = document.querySelectorAll('.well');
+        const solutions = document.querySelectorAll('.solution');
+        const redLitmusBtn = document.getElementById('redLitmusBtn');
+        const blueLitmusBtn = document.getElementById('blueLitmusBtn');
+        const phenolphthaleinBtn = document.getElementById('phenolphthaleinBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const messageBox = document.getElementById('messageBox');
+        const appContainer = document.getElementById('app-container');
+
+        // 용액 초기 색상 설정
+        const initialSolutionColors = [
+            '#fffacd', // 식초 (연한 노란색)
+            'transparent', // 탄산수 (투명)
+            'transparent', // 석회수 (투명)
+            'transparent', // 묽은 염산 (투명)
+            '#add8e6', // 유리 세정제 (파란색)
+            'transparent' // 묽은 수산화 나트륨 (투명)
+        ];
+        
+        // 페놀프탈레인 용액 변화 타겟 색상 (보라색에 가까운 밝은 자주색)
+        const PHENOLPHTHALEIN_BASE_COLOR = '#CC0066'; 
+        
+        // 지시약 크기를 미리 정의 (JavaScript에서 오프셋 계산에 사용)
+        const INDICATOR_SIZES = {
+            'redLitmus': { width: 35, height: 105 },
+            'blueLitmus': { width: 35, height: 105 },
+            'phenolphthalein': { width: 50, height: 100 }
+        };
+
+        solutions.forEach((solution, index) => {
+            solution.style.backgroundColor = initialSolutionColors[index];
+        });
+
+        let activeIndicator = null; 
+        let draggedElement = null; 
+        let isDragging = false;
+        
+        // 지시약 엘리먼트 생성 함수
+        function createIndicatorElement(type) {
+            let el;
+            if (type === 'redLitmus' || type === 'blueLitmus') {
+                el = document.createElement('div');
+                el.classList.add('indicator-strip');
+                el.style.background = (type === 'redLitmus' ? '#ffcccc' : '#a0c0ff'); 
+                el.dataset.type = type;
+            } else if (type === 'phenolphthalein') {
+                el = document.createElement('div');
+                el.classList.add('phenolphthalein-dropper');
+                el.dataset.type = type;
+            }
+            el.style.position = 'absolute';
+            el.style.zIndex = '100'; 
+            el.style.display = 'block'; 
+            appContainer.appendChild(el);
+            return el;
+        }
+
+        // 드래그 시작 (커서 위치에 생성하도록 수정)
+        function startDrag(e) {
+            if (activeIndicator && !draggedElement) {
+                draggedElement = createIndicatorElement(activeIndicator);
+                isDragging = true;
+                messageBox.textContent = ''; 
+
+                const rect = appContainer.getBoundingClientRect();
+                
+                // 미리 정의된 크기를 사용하여 정확한 오프셋 계산
+                const size = INDICATOR_SIZES[activeIndicator];
+                const width = size.width;
+                const height = size.height;
+                
+                // **최종 수정된 부분: 마우스 커서 위치에서 오른쪽으로 150px - 20px = 130px 이동**
+                const OFFSET_X = 130; // 오른쪽으로 130px
+                const OFFSET_Y = 0;   // Y축은 중앙 유지
+                
+                // 초기 생성 위치 설정
+                draggedElement.style.left = (e.clientX - rect.left - width / 2 + OFFSET_X) + 'px';
+                draggedElement.style.top = (e.clientY - rect.top - height / 2 + OFFSET_Y) + 'px';
+                
+                function onMouseMove(e) {
+                    if (isDragging && draggedElement) {
+                        // 드래그 중에도 커서 위치에서 130px 오른쪽으로 유지
+                        draggedElement.style.left = (e.clientX - rect.left - width / 2 + OFFSET_X) + 'px';
+                        draggedElement.style.top = (e.clientY - rect.top - height / 2 + OFFSET_Y) + 'px';
+                    }
+                }
+
+                function onMouseUp() {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            } else if (!activeIndicator) {
+                 messageBox.textContent = "지시약을 선택해 주세요!";
+            }
+        }
+
+        // 지시약 버튼 클릭 이벤트
+        redLitmusBtn.addEventListener('click', (event) => {
+            if (activeIndicator && activeIndicator !== 'redLitmus') {
+                messageBox.textContent = "'처음으로' 버튼을 누른 뒤 다시 실행해주세요.";
+                return;
+            }
+            activeIndicator = 'redLitmus';
+            messageBox.textContent = "붉은색 리트머스 종이를 드래그하여 홈판에 넣어보세요.";
+            startDrag(event);
+        });
+
+        blueLitmusBtn.addEventListener('click', (event) => {
+            if (activeIndicator && activeIndicator !== 'blueLitmus') {
+                messageBox.textContent = "'처음으로' 버튼을 누른 뒤 다시 실행해주세요.";
+                return;
+            }
+            activeIndicator = 'blueLitmus';
+            messageBox.textContent = "푸른색 리트머스 종이를 드래그하여 홈판에 넣어보세요.";
+            startDrag(event);
+        });
+
+        phenolphthaleinBtn.addEventListener('click', (e) => {
+            if (activeIndicator && activeIndicator !== 'phenolphthalein') {
+                messageBox.textContent = "'처음으로' 버튼을 누른 뒤 다시 실행해주세요.";
+                return;
+            }
+            activeIndicator = 'phenolphthalein';
+            messageBox.textContent = "페놀프탈레인 스포이드를 드래그하여 홈판에 용액을 떨어뜨려 보세요.";
+            startDrag(e);
+        });
+
+
+        // 홈판에 지시약 드롭 & 클릭
+        wells.forEach((well, index) => {
+            well.addEventListener('click', (e) => {
+                // 클릭 시점에 draggedElement가 있고, 아직 드래그 중이 아니어야 함 (드롭 후 클릭 처리)
+                if (draggedElement && !isDragging && activeIndicator) {
+                    const solutionDiv = well.querySelector('.solution');
+                    const solutionType = solutionDiv.dataset.type;
+                    const wellPlate = document.getElementById('wellPlate');
+
+                    if (activeIndicator === 'redLitmus' || activeIndicator === 'blueLitmus') {
+                        // 리트머스 종이 처리
+                        const litmusType = draggedElement.dataset.type;
+                        
+                        const wellRect = well.getBoundingClientRect();
+                        const wellPlateRect = wellPlate.getBoundingClientRect();
+                        const wellCenterX = wellRect.left + wellRect.width / 2;
+                        const wellCenterY = wellRect.top + wellRect.height / 2;
+
+                        const insertedStrip = document.createElement('div');
+                        insertedStrip.classList.add('indicator-strip');
+                        insertedStrip.style.position = 'absolute';
+                        insertedStrip.style.display = 'block'; 
+                        insertedStrip.style.transition = 'background 3s ease-in-out'; 
+
+                        // 크기 정보 사용
+                        const stripWidth = INDICATOR_SIZES['redLitmus'].width;
+                        const stripHeight = INDICATOR_SIZES['redLitmus'].height;
+
+                        // 2/3 안쪽, 1/3 바깥쪽으로 위치 조정
+                        insertedStrip.style.left = (wellCenterX - wellPlateRect.left - stripWidth / 2) + 'px';
+                        insertedStrip.style.top = (wellCenterY - wellPlateRect.top - stripHeight / 3) + 'px';
+                        
+                        let initialColor = '';
+                        let finalColor = '';
+
+                        if (litmusType === 'redLitmus') {
+                            initialColor = '#ffcccc'; // 연한 붉은색
+                            finalColor = '#a0c0ff'; // 파란색
+                            
+                            insertedStrip.style.background = `linear-gradient(to bottom, ${initialColor} 0%, ${initialColor} 100%)`;
+
+                            if (solutionType === 'base') {
+                                setTimeout(() => {
+                                    // 3초에 걸쳐 전체 색상으로 변화
+                                    insertedStrip.style.background = `linear-gradient(to bottom, ${finalColor} 0%, ${finalColor} 100%)`;
+                                }, 100); 
+                            }
+                        } else { // blueLitmus
+                            initialColor = '#a0c0ff'; // 하늘색
+                            finalColor = '#ffcccc'; // 붉은색
+                            
+                            insertedStrip.style.background = `linear-gradient(to bottom, ${initialColor} 0%, ${initialColor} 100%)`;
+
+                            if (solutionType === 'acid') {
+                                setTimeout(() => {
+                                    // 3초에 걸쳐 전체 색상으로 변화
+                                    insertedStrip.style.background = `linear-gradient(to bottom, ${finalColor} 0%, ${finalColor} 100%)`;
+                                }, 100);
+                            }
+                        }
+                        
+                        wellPlate.appendChild(insertedStrip); 
+
+                    } else if (activeIndicator === 'phenolphthalein') {
+                        // 페놀프탈레인 용액 처리: 스포이드 드래그 후 클릭하면 바로 물방울 떨어뜨리기
+                        
+                        const dropWater = (delay) => {
+                             setTimeout(() => {
+                                const drop = document.createElement('div');
+                                drop.classList.add('drop-animation');
+                                
+                                const wellRect = well.getBoundingClientRect();
+                                const wellPlateRect = wellPlate.getBoundingClientRect();
+                                const wellCenterX = wellRect.left + wellRect.width / 2;
+                                const wellCenterY = wellRect.top + wellRect.height / 2;
+
+                                drop.style.left = (wellCenterX - wellPlateRect.left) + 'px';
+                                // 물방울 크기(20px)를 고려하여 스포이드 끝에서 떨어지는 것처럼 위치 조정
+                                drop.style.top = (wellCenterY - wellPlateRect.top - 25) + 'px'; 
+
+                                wellPlate.appendChild(drop);
+
+                                drop.addEventListener('animationend', () => {
+                                    drop.remove();
+                                    if (delay === 100) { // 마지막 방울이 떨어질 때 용액 색상 변경
+                                        if (solutionType === 'base') {
+                                            solutionDiv.style.backgroundColor = PHENOLPHTHALEIN_BASE_COLOR; 
+                                        }
+                                    }
+                                });
+                            }, delay);
+                        };
+
+                        dropWater(0);
+                        dropWater(100);
+                    }
+                    
+                    // 지시약 엘리먼트 제거
+                    draggedElement.remove(); 
+                    draggedElement = null; 
+                }
+            });
+        });
+
+        // 초기화 버튼 클릭 이벤트
+        resetBtn.addEventListener('click', () => {
+            document.querySelectorAll('.indicator-strip, .phenolphthalein-dropper').forEach(el => el.remove());
+            
+            solutions.forEach((solution, index) => {
+                solution.style.backgroundColor = initialSolutionColors[index];
+            });
+
+            activeIndicator = null;
+            draggedElement = null;
+            isDragging = false;
+            messageBox.textContent = '';
+        });
+    </script>
+</body>
+</html>

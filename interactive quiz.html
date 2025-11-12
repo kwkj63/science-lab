@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>산과 염기 복습 퀴즈</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        #app-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+            position: relative;
+        }
+        .question-card {
+            min-height: 250px;
+            padding: 20px;
+            border: 2px solid #a7b7ff;
+            border-radius: 10px;
+            background-color: #f9faff;
+        }
+        .score-box {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background-color: #ffe0b2;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        /* 인터랙티브 홈판 스타일 */
+        .well {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 2px solid #a7b7ff;
+            background-color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: default; /* 드래그 가능한 지시약이 따로 생성됨 */
+            overflow: hidden;
+            margin: 0 auto;
+        }
+        .solution {
+            width: 95%;
+            height: 95%;
+            border-radius: 50%;
+            background-color: transparent;
+            transition: background-color 0.5s ease-out;
+        }
+        /* 지시약 스타일 (이전 시뮬레이션에서 가져옴) */
+        .indicator-strip {
+            position: absolute;
+            width: 35px;
+            height: 105px;
+            background-color: #ffcccc; 
+            border-radius: 3px;
+            pointer-events: none; 
+            z-index: 100; /* 최상위 */
+            display: none; 
+            transition: background 0.5s ease-in-out; /* 빠른 변화 */
+        }
+        .dropper-element { /* 페놀프탈레인/붉은 양배추 스포이드 */
+            position: absolute;
+            width: 50px;
+            height: 100px;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><rect x="30" y="0" width="40" height="50" rx="10" ry="10" fill="%23a0a0a0"/><circle cx="50" cy="50" r="25" fill="%23a0a0a0"/><rect x="40" y="70" width="20" height="100" fill="%23cccccc"/><circle cx="50" cy="170" r="10" fill="%23cccccc"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            cursor: grab;
+            z-index: 100;
+            display: none;
+        }
+        .drop-animation {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #8A2BE2; /* 기본 보라색 물방울 */
+            position: absolute;
+            opacity: 0;
+            animation: dropFade 0.8s forwards;
+            pointer-events: none;
+            z-index: 99;
+        }
+        @keyframes dropFade {
+            0% { transform: translate(-50%, -20px); opacity: 1; } 
+            100% { transform: translate(-50%, 30px); opacity: 0; }
+        }
+
+        /* 모달 피드백 스타일 */
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: bounceIn 0.5s ease-out;
+            max-width: 90%;
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body onload="initQuiz()">
+    <div id="app-container">
+        <div class="score-box">점수: <span id="currentScore">0</span> / 10</div>
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 text-center">🧪 산과 염기 복습 퀴즈</h1>
+
+        <div id="quizArea">
+            <!-- 문제 표시 영역 -->
+            <p class="text-xl font-semibold mb-4 text-black">
+                <span id="questionNumber">1</span>. <span id="questionText"></span>
+            </p>
+
+            <div class="question-card">
+                <!-- OX, 단답형, 일반 객관식 옵션 영역 -->
+                <div id="optionsArea" class="space-y-3"></div>
+
+                <!-- 인터랙티브 문제 영역 -->
+                <div id="interactiveArea" class="hidden flex flex-col items-center">
+                    
+                    <!-- 1. 지시약 버튼 영역 (무작위로 하나만 표시됨) -->
+                    <div id="indicatorButtons" class="mt-4 flex flex-wrap justify-center gap-2 mb-6">
+                        <!-- 여기에 무작위 지시약 버튼이 삽입됩니다. -->
+                    </div>
+
+                    <!-- 2. 홈판 -->
+                    <div class="well-container relative" style="width: 120px; height: 120px;">
+                        <div class="well" id="unknownWell">
+                            <div class="solution" data-type=""></div>
+                        </div>
+                        <div id="dragTarget" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 50;"></div>
+                    </div>
+                    
+                    <p class="text-lg font-bold my-4">용액의 성질은 무엇일까요?</p>
+                    
+                    <!-- 3. 최종 답변 선택 버튼 -->
+                    <div id="interactiveAnswer" class="mt-2 flex space-x-4">
+                        <button class="final-select-btn px-6 py-3 bg-yellow-500 text-white rounded-full font-bold hover:bg-yellow-600 transition duration-150" data-answer="산성">산성 용액</button>
+                        <button class="final-select-btn px-6 py-3 bg-teal-500 text-white rounded-full font-bold hover:bg-teal-600 transition duration-150" data-answer="염기성">염기성 용액</button>
+                    </div>
+                </div>
+
+                <!-- 단답형 입력 영역 -->
+                <div id="shortAnswerArea" class="hidden">
+                    <input type="text" id="shortAnswerInput" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="여기에 답을 입력하세요.">
+                    <p id="answerLengthHint" class="text-sm text-gray-500 mt-2 text-left"></p>
+                </div>
+
+                <!-- 다음/결과 버튼 -->
+                <button id="nextBtn" class="mt-6 w-full px-6 py-3 bg-blue-500 text-white font-bold rounded-lg shadow-md hover:bg-blue-600 transition duration-300">
+                    답변 확인 및 다음 문제
+                </button>
+                <div id="correctFeedback" class="mt-4 text-center font-bold text-lg hidden"></div>
+            </div>
+        </div>
+
+        <div id="finalFeedbackModal" class="feedback-modal hidden">
+            <div id="modalContent" class="modal-content">
+                <!-- 결과 메시지 표시 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. 퀴즈 데이터 정의 (교과서 주요 개념 기반) ---
+        const quizData = [
+            // OX 문제 (type: 'ox') - 3개
+            { 
+                q: "산성 용액은 푸른색 리트머스 종이를 붉은색으로 변하게 한다.", 
+                type: 'ox', 
+                correct: 'O',
+                rationale: "산성 용액의 가장 기본적인 특징 중 하나로, 푸른색 리트머스 종이를 붉은색으로 변화시킵니다. (과학 107쪽)" 
+            },
+            { 
+                q: "페놀프탈레인 용액은 염기성 용액에 떨어뜨리면 붉은색(자주색)으로 변한다.", 
+                type: 'ox', 
+                correct: 'O',
+                rationale: "페놀프탈레인 용액은 염기성 용액을 만나면 붉은색(실제로는 자주색 계열)으로 변하는 지시약입니다. (과학 107쪽)"
+            },
+            { 
+                q: "염기성 용액에 메추리알 껍데기나 대리암 조각을 넣으면 기포가 발생하며 녹는다.", 
+                type: 'ox', 
+                correct: 'X',
+                rationale: "메추리알 껍데기나 대리암은 산성 용액과 반응하여 기포가 발생하며 녹습니다. 염기성 용액에서는 변화가 거의 없습니다. (과학 111쪽)" 
+            },
+            
+            // 단답형 및 빈칸 채우기 문제 (type: 'sa') - 4개
+            { 
+                q: "염기성 용액은 단백질을 [빈칸]는 성질이 있어 손에 닿으면 미끌미끌합니다. (빈칸을 2글자로 채우세요)", 
+                type: 'sa', 
+                correct: ['녹이', '녹이는'],
+                correctLength: 2,
+                rationale: "염기성 용액은 단백질을 녹이는 성질이 있어 미끌미끌한 느낌을 줍니다. (과학 111쪽)"
+            },
+            { 
+                // **문제 지문 수정: 괄호와 글자 수 요구 사항 삭제**
+                q: "묽은 염산처럼 자극성이 강한 용액의 냄새를 맡을 때 올바른 방법은 손으로 [빈칸]을 일으켜 맡는 것입니다.", 
+                type: 'sa', 
+                correct: ['바람'],
+                correctLength: 2, // 정답 '바람' (2글자)
+                rationale: "안전을 위해 용액에 코를 가까이 대지 않고 손으로 바람을 일으켜 맡아야 합니다. (과학 104쪽 안전 수칙)"
+            },
+            { 
+                // **문제 지문 수정: 괄호와 글자 수 요구 사항 삭제**
+                q: "산성 용액을 이용하는 예시 중, 생선을 손질한 도마에서 나는 냄새를 없애기 위해 사용되는 액체는 무엇인가요?", 
+                type: 'sa', 
+                correct: ['식초'],
+                correctLength: 2, // 정답 '식초' (2글자)
+                rationale: "식초는 산성 용액으로, 생선 비린내(염기성 물질)를 중화시켜 냄새를 없애는 데 이용됩니다. (과학 115쪽)"
+            },
+            { 
+                q: "산성 용액에 대리암 조각을 넣었을 때 발생하는 현상을 간단히 2단어로 적어주세요. (띄어쓰기 없이)", 
+                type: 'sa', 
+                correct: ['기포발생', '거품발생'],
+                correctLength: 4,
+                rationale: "산성 용액이 대리암(탄산칼슘)과 반응하면 이산화 탄소 기포가 발생하며 녹습니다. (과학 111쪽)"
+            },
+
+            // 인터랙티브 문제 (type: 'interactive') - 3개
+            { 
+                q: "아래 홈판의 용액은 산성일까요 염기성일까요? 🧪 주어진 지시약을 사용해 확인해 보세요.", 
+                type: 'interactive', 
+                solutionType: '산성', 
+                indicator: 'redLitmus', // 붉은 리트머스 종이 제공
+                correct: '산성',
+                rationale: "붉은 리트머스 종이가 색 변화 없이 붉은색을 유지하면 산성입니다." 
+            },
+            { 
+                q: "아래 홈판의 용액은 산성일까요 염기성일까요? 🧪 주어진 지시약을 사용해 확인해 보세요.", 
+                type: 'interactive', 
+                solutionType: '염기성', 
+                indicator: 'phenolphthalein', // 페놀프탈레인 용액 제공
+                correct: '염기성',
+                rationale: "페놀프탈레인 용액이 붉은색(자주색)으로 변하면 염기성 용액입니다."
+            },
+            { 
+                q: "아래 홈판의 용액은 산성일까요 염기성일까요? 🧪 주어진 지시약을 사용해 확인해 보세요.", 
+                type: 'interactive', 
+                solutionType: '산성', 
+                indicator: 'redCabbage', // 붉은 양배추 지시약 제공
+                correct: '산성',
+                rationale: "붉은 양배추 지시약이 붉은색 계열로 변하면 산성 용액입니다." 
+            }
+        ];
+
+        // 지시약 색상 규칙
+        const indicatorColors = {
+            redLitmus: { acid: '#ffcccc', base: '#a0c0ff', colorCode: '붉은색 -> 파란색' }, // 종이색
+            blueLitmus: { acid: '#ffcccc', base: '#a0c0ff', colorCode: '푸른색 -> 붉은색' }, // 종이색
+            phenolphthalein: { acid: 'transparent', base: '#CC0066', colorCode: '무색 -> 붉은색(자주)' }, // 용액색
+            redCabbage: { acid: '#DC143C', base: '#3399FF', colorCode: '보라색 -> 붉은색 or 푸른색' } // 용액색 (대표 산/염기 색상)
+        };
+        
+        const INDICATOR_SIZES = {
+            'redLitmus': { width: 35, height: 105 },
+            'blueLitmus': { width: 35, height: 105 },
+            'phenolphthalein': { width: 50, height: 100 },
+            'redCabbage': { width: 50, height: 100 }
+        };
+
+        // --- 2. 퀴즈 상태 변수 ---
+        let currentQuizData = []; 
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let answered = false;
+        let currentIndicatorType = null; // 현재 문제의 지시약 타입
+        let isIndicatorUsed = false; // 인터랙티브 문제에서 지시약 사용 여부
+        let draggedElement = null; // 전역 변수로 선언
+
+        // --- 3. DOM 요소 캐싱 ---
+        const $questionNumber = document.getElementById('questionNumber');
+        const $questionText = document.getElementById('questionText');
+        const $optionsArea = document.getElementById('optionsArea');
+        const $interactiveArea = document.getElementById('interactiveArea');
+        const $unknownWell = document.getElementById('unknownWell');
+        const $solutionDiv = $unknownWell.querySelector('.solution');
+        const $indicatorButtons = document.getElementById('indicatorButtons');
+        const $interactiveAnswer = document.getElementById('interactiveAnswer');
+        const $shortAnswerArea = document.getElementById('shortAnswerArea');
+        const $shortAnswerInput = document.getElementById('shortAnswerInput');
+        const $nextBtn = document.getElementById('nextBtn');
+        const $currentScore = document.getElementById('currentScore');
+        const $correctFeedback = document.getElementById('correctFeedback');
+        const $appContainer = document.getElementById('app-container');
+        const $dragTarget = document.getElementById('dragTarget');
+        const $answerLengthHint = document.getElementById('answerLengthHint');
+        
+        // --- 4. 퀴즈 초기화 및 시작 ---
+        function initQuiz() {
+            // 문제를 무작위로 섞음 (3개 유형별 섞기 유지)
+            const oxQuestions = quizData.filter(q => q.type === 'ox').sort(() => Math.random() - 0.5);
+            const saQuestions = quizData.filter(q => q.type === 'sa').sort(() => Math.random() - 0.5);
+            const interactiveQuestions = quizData.filter(q => q.type === 'interactive').sort(() => Math.random() - 0.5);
+            
+            currentQuizData = [...oxQuestions, ...saQuestions, ...interactiveQuestions].sort(() => Math.random() - 0.5);
+            
+            currentQuestionIndex = 0;
+            score = 0;
+            $currentScore.textContent = score;
+            answered = false;
+            
+            loadQuestion();
+        }
+
+        // --- 5. 다음 문제 로드 ---
+        function loadQuestion() {
+            if (currentQuestionIndex >= currentQuizData.length) {
+                showResults();
+                return;
+            }
+
+            answered = false;
+            isIndicatorUsed = false; // 지시약 사용 초기화
+            $correctFeedback.classList.add('hidden');
+            $nextBtn.textContent = "답변 확인 및 다음 문제";
+            $nextBtn.disabled = false;
+            $nextBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+            $nextBtn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            
+            const q = currentQuizData[currentQuestionIndex];
+            $questionNumber.textContent = currentQuestionIndex + 1;
+            $questionText.textContent = q.q;
+
+            // 영역 초기화 및 표시/숨김 설정
+            $optionsArea.innerHTML = '';
+            $shortAnswerArea.classList.add('hidden');
+            $interactiveArea.classList.add('hidden');
+
+            // 인터랙티브 초기화
+            $solutionDiv.style.backgroundColor = 'transparent'; 
+            $indicatorButtons.innerHTML = ''; 
+            
+            if (q.type === 'ox') {
+                displayOX(q);
+            } else if (q.type === 'sa') {
+                displayShortAnswer(q);
+            } else if (q.type === 'interactive') {
+                displayInteractive(q);
+            }
+        }
+
+        // --- 6. OX 문제 표시 ---
+        function displayOX(q) {
+            const options = ['O', 'X'];
+            options.forEach(option => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full p-3 border border-blue-300 rounded-lg text-lg font-medium hover:bg-blue-100 transition duration-150 text-gray-800';
+                btn.textContent = option;
+                btn.dataset.answer = option;
+                btn.onclick = () => selectOption(btn);
+                $optionsArea.appendChild(btn);
+            });
+        }
+
+        // --- 7. 단답형 문제 표시 ---
+        function displayShortAnswer(q) {
+            $shortAnswerArea.classList.remove('hidden');
+            $shortAnswerInput.value = '';
+            
+            // 글자 수 힌트 표시 (수정 반영)
+            if (q.correctLength) {
+                $answerLengthHint.textContent = `(힌트: ${q.correctLength}글자)`;
+            } else {
+                $answerLengthHint.textContent = '';
+            }
+        }
+
+        // --- 8. 인터랙티브 문제 표시 ---
+        function displayInteractive(q) {
+            $interactiveArea.classList.remove('hidden');
+            currentIndicatorType = q.indicator; // 현재 문제의 지시약 타입 설정
+            
+            // 8-1. 지시약 버튼 생성 (하나만)
+            const indicatorName = {
+                'redLitmus': '붉은 리트머스 종이', 
+                'blueLitmus': '푸른 리트머스 종이', 
+                'phenolphthalein': '페놀프탈레인 용액', 
+                'redCabbage': '붉은 양배추 지시약'
+            }[currentIndicatorType];
+            
+            const btn = document.createElement('button');
+            btn.className = `indicator-btn px-6 py-3 text-white font-semibold rounded-lg shadow-md transition duration-300 ${getIndicatorColorClass(currentIndicatorType)}`;
+            btn.textContent = indicatorName;
+            btn.dataset.indicator = currentIndicatorType;
+            // 버튼 클릭 시 드래그 시작 함수 호출 (수정 반영)
+            btn.onclick = (e) => startInteractiveDrag(e, currentIndicatorType);
+            $indicatorButtons.appendChild(btn);
+
+            // 8-2. 최종 답변 버튼 이벤트 설정
+            document.querySelectorAll('.final-select-btn').forEach(btn => {
+                btn.onclick = () => selectFinalAnswer(btn.dataset.answer);
+                btn.disabled = true; // 지시약 투입 전에는 비활성화
+            });
+        }
+
+        // 지시약 타입에 따른 CSS 클래스 반환 함수
+        function getIndicatorColorClass(type) {
+            if (type === 'redLitmus') return 'bg-red-400 hover:bg-red-500';
+            if (type === 'blueLitmus') return 'bg-blue-400 hover:bg-blue-500';
+            if (type === 'phenolphthalein') return 'bg-purple-400 hover:bg-purple-500';
+            if (type === 'redCabbage') return 'bg-green-400 hover:bg-green-500';
+            return 'bg-gray-400';
+        }
+
+        // --- 9. OX 옵션 선택 처리 ---
+        function selectOption(selectedBtn) {
+            if (answered) return;
+            $optionsArea.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('bg-blue-300', 'selected');
+            });
+            selectedBtn.classList.add('bg-blue-300', 'selected'); 
+        }
+        
+        // --- 10. 인터랙티브 드래그 시작 (지시약 엘리먼트 생성) ---
+        function startInteractiveDrag(e, type) {
+            if (isIndicatorUsed) {
+                $correctFeedback.textContent = "이미 지시약을 투입했습니다. 답을 선택하세요.";
+                $correctFeedback.classList.remove('hidden');
+                return;
+            }
+            if (draggedElement) return; // 이미 드래그 중인 요소가 있으면 무시
+
+            // 1. 지시약 엘리먼트 생성
+            let el = document.createElement('div');
+            el.dataset.type = type;
+
+            if (type === 'redLitmus' || type === 'blueLitmus') {
+                el.classList.add('indicator-strip');
+                el.style.background = (type === 'redLitmus' ? '#ffcccc' : '#a0c0ff'); 
+            } else {
+                el.classList.add('dropper-element');
+            }
+            
+            el.style.position = 'absolute';
+            el.style.display = 'block'; // **수정: 생성 즉시 보이도록 보장**
+            $appContainer.appendChild(el);
+            draggedElement = el;
+            
+            // 2. 초기 위치 설정 (마우스 커서 중앙에 맞추기)
+            const rect = $appContainer.getBoundingClientRect();
+            const size = INDICATOR_SIZES[type];
+            const width = size.width;
+            const height = size.height;
+            
+            // 마우스 커서 위치에 정확히 중앙 정렬
+            const initialX = e.clientX - rect.left - width / 2;
+            const initialY = e.clientY - rect.top - height / 2;
+            
+            draggedElement.style.left = initialX + 'px';
+            draggedElement.style.top = initialY + 'px';
+
+            // 3. 드래그 로직
+            const onMouseMove = (e) => {
+                if (draggedElement) {
+                    draggedElement.style.left = (e.clientX - rect.left - width / 2) + 'px';
+                    draggedElement.style.top = (e.clientY - rect.top - height / 2) + 'px';
+                }
+            };
+
+            const onMouseUp = () => {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+            };
+
+            const onTargetClick = (e) => {
+                 // 홈판 영역 클릭 시 투입 처리
+                if (draggedElement) {
+                    const q = currentQuizData[currentQuestionIndex]; // q 변수를 가져옴
+                    e.stopPropagation(); // 이벤트 전파 중지
+                    if (draggedElement.dataset.type === 'redLitmus' || draggedElement.dataset.type === 'blueLitmus') {
+                        // 리트머스 종이: 드래그 요소만 변경 (종이 자체를 담근 효과)
+                        applyLitmusChange(draggedElement.dataset.type, q.solutionType);
+                    } else {
+                        // 스포이드: 물방울 떨구고 용액 색상 변경
+                        applyDropperChange(draggedElement.dataset.type, q.solutionType);
+                    }
+                    
+                    draggedElement.remove(); // 사용한 지시약 엘리먼트 제거
+                    draggedElement = null;
+                    isIndicatorUsed = true;
+                    document.querySelectorAll('.final-select-btn').forEach(btn => btn.disabled = false); // 답변 버튼 활성화
+                    $dragTarget.removeEventListener('click', onTargetClick);
+                }
+            };
+            
+            // 4. 이벤트 리스너 부착
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            $dragTarget.addEventListener('click', onTargetClick); // 홈판 위에 클릭 이벤트 부착
+        }
+
+        // --- 11. 리트머스 종이 색상 변화 적용 ---
+        function applyLitmusChange(indicator, solutionType) {
+            const q = currentQuizData[currentQuestionIndex];
+            const substanceType = solutionType === '산성' ? 'acid' : 'base';
+            
+            let initialColor;
+            let finalColor;
+
+            if (indicator === 'redLitmus') {
+                initialColor = indicatorColors.redLitmus.acid;
+                finalColor = indicatorColors.redLitmus.base;
+                if (substanceType === 'base') {
+                    $solutionDiv.style.backgroundColor = finalColor;
+                } else {
+                    $solutionDiv.style.backgroundColor = initialColor;
+                }
+            } else { // blueLitmus
+                initialColor = indicatorColors.blueLitmus.base;
+                finalColor = indicatorColors.blueLitmus.acid;
+                if (substanceType === 'acid') {
+                    $solutionDiv.style.backgroundColor = finalColor;
+                } else {
+                    $solutionDiv.style.backgroundColor = initialColor;
+                }
+            }
+
+            // 시각적 효과: 용액이 종이 색으로 일시적으로 물드는 효과
+            $solutionDiv.style.opacity = 0.5;
+            setTimeout(() => {
+                $solutionDiv.style.opacity = 1;
+            }, 500);
+            
+             $correctFeedback.textContent = `[${solutionType}]에 ${indicator === 'redLitmus' ? '붉은 리트머스' : '푸른 리트머스'} 투입: 용액 색이 지시약 색으로 변했습니다.`;
+             $correctFeedback.classList.remove('hidden');
+        }
+
+        // --- 12. 스포이드 (용액) 색상 변화 적용 ---
+        function applyDropperChange(indicator, solutionType) {
+            const q = currentQuizData[currentQuestionIndex];
+            const substanceType = solutionType === '산성' ? 'acid' : 'base';
+            const finalColor = substanceType === 'acid' ? indicatorColors[indicator].acid : indicatorColors[indicator].base;
+            
+            const dropperColor = indicator === 'phenolphthalein' ? 'transparent' : '#8A2BE2'; // 페놀프탈레인은 무색 방울, 양배추는 보라색 방울
+
+            // 1. 물방울 애니메이션
+            const wellRect = $unknownWell.getBoundingClientRect();
+            const appRect = $appContainer.getBoundingClientRect();
+            const wellCenterX = wellRect.left + wellRect.width / 2;
+            const wellCenterY = wellRect.top + wellRect.height / 2;
+
+            const dropWater = (delay) => {
+                 setTimeout(() => {
+                    const drop = document.createElement('div');
+                    drop.classList.add('drop-animation');
+                    drop.style.backgroundColor = dropperColor;
+
+                    drop.style.left = (wellCenterX - appRect.left) + 'px';
+                    drop.style.top = (wellCenterY - appRect.top - 25) + 'px'; 
+
+                    $appContainer.appendChild(drop);
+
+                    drop.addEventListener('animationend', () => {
+                        drop.remove();
+                        if (delay === 100) { // 마지막 방울이 떨어질 때 용액 색상 변경
+                            $solutionDiv.style.backgroundColor = finalColor; 
+                        }
+                    });
+                }, delay);
+            };
+
+            dropWater(0);   // 첫 번째 물방울
+            dropWater(100); // 두 번째 물방울
+            
+             $correctFeedback.textContent = `[${solutionType}]에 ${indicator === 'phenolphthalein' ? '페놀프탈레인' : '붉은 양배추'} 투입: 용액이 ${finalColor}으로 변했습니다.`;
+             $correctFeedback.classList.remove('hidden');
+        }
+
+        // --- 13. 답변 확인 및 다음 문제 버튼 처리 ---
+        $nextBtn.addEventListener('click', () => {
+            if (!answered) {
+                checkAnswer();
+            } else {
+                currentQuestionIndex++;
+                loadQuestion();
+            }
+        });
+        
+        // --- 14. 답변 확인 로직 (OX, SA) ---
+        function checkAnswer() {
+            const q = currentQuizData[currentQuestionIndex];
+            let userAnswer = null;
+            let isCorrect = false;
+
+            if (q.type === 'ox') {
+                const selectedBtn = $optionsArea.querySelector('.selected');
+                if (!selectedBtn) {
+                    $correctFeedback.textContent = "답을 선택해 주세요!";
+                    $correctFeedback.classList.add('text-red-500', 'block');
+                    $correctFeedback.classList.remove('hidden');
+                    return;
+                }
+                userAnswer = selectedBtn.dataset.answer;
+                isCorrect = userAnswer === q.correct;
+            } else if (q.type === 'sa') {
+                userAnswer = $shortAnswerInput.value.toLowerCase().trim().replace(/ /g, ''); // 띄어쓰기 제거
+                const correctAnswers = Array.isArray(q.correct) ? q.correct.map(a => a.toLowerCase().replace(/ /g, '')) : [q.correct.toLowerCase().replace(/ /g, '')];
+                isCorrect = correctAnswers.includes(userAnswer);
+            } else if (q.type === 'interactive') {
+                // 인터랙티브 문제는 selectFinalAnswer에서 처리됨
+                if (!isIndicatorUsed) {
+                     $correctFeedback.textContent = "지시약을 사용해 용액의 성질을 먼저 확인해주세요.";
+                    $correctFeedback.classList.add('text-red-500', 'block');
+                    $correctFeedback.classList.remove('hidden');
+                    return;
+                }
+                // 인터랙티브 문제는 최종 답 선택 버튼 클릭 시 처리되므로, 여기서 '답변 확인'을 눌렀다면 무시
+                return;
+            }
+
+            // 일반 문제 정답/오답 처리
+            if (isCorrect) {
+                score++;
+                $currentScore.textContent = score;
+                $correctFeedback.textContent = "정답! 👍";
+                $correctFeedback.classList.remove('text-red-500');
+                $correctFeedback.classList.add('text-green-500');
+            } else {
+                let answerDisplay = Array.isArray(q.correct) ? q.correct.join(', ') : q.correct;
+                $correctFeedback.textContent = `오답! 👎 정답: (${answerDisplay}). (${q.rationale})`;
+                $correctFeedback.classList.remove('text-green-500');
+                $correctFeedback.classList.add('text-red-500');
+            }
+
+            answered = true;
+            $nextBtn.textContent = "다음 문제로 이동";
+            $nextBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            $nextBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            $correctFeedback.classList.remove('hidden');
+        }
+
+        // --- 15. 인터랙티브 최종 답변 선택 처리 (인터랙티브 문제 전용) ---
+        function selectFinalAnswer(selectedAnswer) {
+            if (answered) return;
+            if (!isIndicatorUsed) {
+                $correctFeedback.textContent = "지시약을 사용해 용액의 성질을 먼저 확인해주세요.";
+                $correctFeedback.classList.remove('hidden');
+                return;
+            }
+
+            const q = currentQuizData[currentQuestionIndex];
+            const isCorrect = selectedAnswer === q.correct;
+
+            if (isCorrect) {
+                score++;
+                $currentScore.textContent = score;
+                $correctFeedback.textContent = "정답! 👍";
+                $correctFeedback.classList.remove('text-red-500');
+                $correctFeedback.classList.add('text-green-500');
+            } else {
+                $correctFeedback.textContent = `오답! 👎 (${q.rationale})`;
+                $correctFeedback.classList.remove('text-green-500');
+                $correctFeedback.classList.add('text-red-500');
+            }
+
+            answered = true;
+            $nextBtn.textContent = "다음 문제로 이동";
+            $nextBtn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            $nextBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+            $correctFeedback.classList.remove('hidden');
+        }
+
+        // --- 16. 최종 결과 표시 ---
+        function showResults() {
+            let message = '';
+            let emoji = '';
+
+            if (score === 10) {
+                message = `100점이에요! 참 잘했어요!`;
+                emoji = "🐰🐻";
+            } else if (score >= 7) {
+                message = "아주 잘했어요!";
+                emoji = "👏";
+            } else if (score >= 4) {
+                message = "다음엔 더 잘할 수 있을거에요!";
+                emoji = "💪";
+            } else {
+                message = "우리 더 연습해봐요~";
+                emoji = "📚";
+            }
+
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <div class="text-6xl mb-4">${emoji}</div>
+                <h2 class="text-4xl font-bold mb-3 text-gray-800">결과: ${score} / 10점</h2>
+                <p class="text-2xl text-blue-700">${message}</p>
+                <button onclick="document.getElementById('finalFeedbackModal').classList.add('hidden'); initQuiz()" 
+                        class="mt-6 px-8 py-3 bg-blue-500 text-white font-bold rounded-lg hover:bg-blue-600 transition duration-300">
+                    다시 풀기
+                </button>
+            `;
+            document.getElementById('finalFeedbackModal').classList.remove('hidden');
+        }
+        
+    </script>
+</body>
+</html>

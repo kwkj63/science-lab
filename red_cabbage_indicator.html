@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5학년 과학: 붉은 양배추 지시약 실험</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        #app-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+        .well-plate {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            background-color: #e0e7ff; /* 홈판 배경색 */
+            border-radius: 10px;
+            position: relative;
+            margin: 0 auto;
+            max-width: 600px; /* 홈판 전체 너비 제한 */
+        }
+        .well-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+        /* 이름표 스타일: 노란 박스 형태 (이전 파일과 동일하게 유지) */
+        .well-label {
+            padding: 4px 10px;
+            border-radius: 6px;
+            background-color: #fffacb; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            position: absolute;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #1a202c; 
+            white-space: nowrap;
+            line-height: 1.2;
+            text-align: center;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 5;
+        }
+        .well-wrapper:nth-child(-n+3) .well-label {
+            top: -45px;
+        }
+        .well-wrapper:nth-child(n+4) .well-label {
+            bottom: -45px;
+        }
+
+        .well {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 2px solid #a7b7ff; 
+            background-color: #f8fafc; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; 
+            position: relative;
+            cursor: pointer;
+        }
+        .solution {
+            width: 95%;
+            height: 95%;
+            border-radius: 50%;
+            position: relative;
+            background-color: transparent; 
+            transition: background-color 0.5s ease-out; /* 용액 변화 속도 */
+        }
+        .indicator-dropper { /* 붉은 양배추 지시약용 스포이드 */
+            position: absolute;
+            width: 50px;
+            height: 100px;
+            /* SVG: 점적병 모양 */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 200"><rect x="30" y="0" width="40" height="50" rx="10" ry="10" fill="%23a0a0a0"/><circle cx="50" cy="50" r="25" fill="%23a0a0a0"/><rect x="40" y="70" width="20" height="100" fill="%23cccccc"/><circle cx="50" cy="170" r="10" fill="%23cccccc"/></svg>');
+            background-repeat: no-repeat;
+            background-size: contain;
+            cursor: grab;
+            z-index: 20;
+            display: none;
+        }
+        /* 물방울 크기 2배 확대 (20px) */
+        .drop-animation {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #8A2BE2; /* 보라색 물방울 */
+            position: absolute;
+            opacity: 0;
+            animation: dropFade 0.8s forwards;
+            pointer-events: none;
+        }
+        @keyframes dropFade {
+            0% { transform: translate(-50%, -20px); opacity: 1; } 
+            100% { transform: translate(-50%, 30px); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container" class="text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">🔬 붉은 양배추 지시약 실험 시뮬레이션</h1>
+        <p class="text-center text-gray-600 mb-8">지시약을 홈판 용액에 넣어 용액의 성질에 따른 색 변화를 관찰해 보세요.</p>
+
+        <!-- 지시약 선택 버튼 -->
+        <div class="flex justify-center space-x-4 mb-10">
+            <button id="redCabbageBtn" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition duration-300">
+                붉은 양배추 지시약
+            </button>
+        </div>
+
+        <!-- 6홈판 -->
+        <div class="well-plate" id="wellPlate">
+            <!-- 윗 줄: 홈 위에 이름표 -->
+            <div class="well-wrapper">
+                <span class="well-label">식초</span>
+                <div class="well" id="well0"><div class="solution" data-type="acid-medium"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">탄산수</span>
+                <div class="well" id="well1"><div class="solution" data-type="acid-weak"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">석회수</span>
+                <div class="well" id="well2"><div class="solution" data-type="base-weak"></div></div>
+            </div>
+            <!-- 아랫 줄: 홈 아래에 이름표 -->
+            <div class="well-wrapper">
+                <span class="well-label">묽은 염산</span>
+                <div class="well" id="well3"><div class="solution" data-type="acid-strong"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">유리 세정제</span>
+                <div class="well" id="well4"><div class="solution" data-type="base-medium"></div></div>
+            </div>
+            <div class="well-wrapper">
+                <span class="well-label">묽은 수산화 나트륨</span>
+                <div class="well" id="well5"><div class="solution" data-type="base-strong"></div></div>
+            </div>
+        </div>
+
+        <!-- 메시지 및 초기화 버튼 -->
+        <div id="messageBox" class="text-red-500 mt-6 text-lg font-semibold h-7"></div>
+        <button id="resetBtn" class="mt-8 px-8 py-4 bg-gray-600 text-white text-xl font-bold rounded-full shadow-lg hover:bg-gray-700 transition duration-300">
+            처음으로
+        </button>
+    </div>
+
+    <script>
+        const wells = document.querySelectorAll('.well');
+        const solutions = document.querySelectorAll('.solution');
+        const redCabbageBtn = document.getElementById('redCabbageBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const messageBox = document.getElementById('messageBox');
+        const appContainer = document.getElementById('app-container');
+
+        // 용액 초기 색상 설정
+        const initialSolutionColors = [
+            '#fffacd', // 식초 (연한 노란색)
+            'transparent', // 탄산수 (투명)
+            'transparent', // 석회수 (투명)
+            'transparent', // 묽은 염산 (투명)
+            '#add8e6', // 유리 세정제 (파란색)
+            'transparent' // 묽은 수산화 나트륨 (투명)
+        ];
+        
+        // 붉은 양배추 지시약에 따른 최종 색상 정의
+        const RED_CABBAGE_COLORS = {
+            'acid-strong': '#DC143C',   
+            'acid-medium': '#C71585',   
+            'acid-weak': '#FF69B4',     
+            'base-weak': '#00BFFF',     
+            'base-medium': '#3399FF',   
+            'base-strong': '#ADFF2F'    
+        };
+        
+        // 지시약 크기를 미리 정의 (JavaScript에서 오프셋 계산에 사용)
+        const INDICATOR_SIZES = {
+            'redCabbage': { width: 50, height: 100 } // 스포이드 크기
+        };
+
+        solutions.forEach((solution, index) => {
+            solution.style.backgroundColor = initialSolutionColors[index];
+        });
+
+        let activeIndicator = null; 
+        let draggedElement = null; 
+        let isDragging = false;
+        
+        // 지시약 엘리먼트 생성 함수 (스포이드 전용)
+        function createIndicatorElement(type) {
+            let el = document.createElement('div');
+            el.classList.add('indicator-dropper');
+            el.dataset.type = type;
+            el.style.position = 'absolute';
+            el.style.zIndex = '100'; 
+            el.style.display = 'block'; 
+            appContainer.appendChild(el);
+            return el;
+        }
+
+        // 드래그 시작 (커서 위치에 생성 + 130px 오프셋)
+        function startDrag(e) {
+            if (activeIndicator && !draggedElement) {
+                draggedElement = createIndicatorElement(activeIndicator);
+                isDragging = true;
+                messageBox.textContent = ''; 
+
+                // 마우스 이벤트에서 뷰포트 기준 좌표를 가져옵니다.
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+
+                // app-container의 뷰포트 기준 위치를 가져옵니다.
+                const rect = appContainer.getBoundingClientRect();
+                
+                const size = INDICATOR_SIZES[activeIndicator];
+                const width = size.width;
+                const height = size.height;
+                
+                // 최종 오프셋: 마우스 커서 중앙으로부터 오른쪽으로 130px - 20px = 110px
+                // (150px - 20px = 130px 였으나, 다시 왼쪽으로 20px 이동 요청에 따라 110px로 조정)
+                const OFFSET_X = 110; 
+                const OFFSET_Y = 0;   
+                
+                // 초기 생성 위치 설정
+                // clientX/Y는 뷰포트 기준, rect.left/top도 뷰포트 기준입니다.
+                // clientX/Y - rect.left/top = appContainer 내에서의 상대 위치
+                draggedElement.style.left = (clientX - rect.left - width / 2 + OFFSET_X) + 'px';
+                draggedElement.style.top = (clientY - rect.top - height / 2 + OFFSET_Y) + 'px';
+                
+                function onMouseMove(e) {
+                    if (isDragging && draggedElement) {
+                        const newClientX = e.clientX;
+                        const newClientY = e.clientY;
+                        
+                        // 드래그 중에도 커서 위치에서 110px 오른쪽으로 유지
+                        draggedElement.style.left = (newClientX - rect.left - width / 2 + OFFSET_X) + 'px';
+                        draggedElement.style.top = (newClientY - rect.top - height / 2 + OFFSET_Y) + 'px';
+                    }
+                }
+
+                function onMouseUp() {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            } else if (!activeIndicator) {
+                 messageBox.textContent = "지시약을 선택해 주세요!";
+            }
+        }
+
+        // 붉은 양배추 지시약 버튼 클릭 이벤트
+        redCabbageBtn.addEventListener('click', (event) => {
+            activeIndicator = 'redCabbage';
+            messageBox.textContent = "붉은 양배추 스포이드를 드래그하여 홈판에 용액을 떨어뜨려 보세요.";
+            startDrag(event);
+        });
+
+
+        // 홈판에 지시약 클릭 이벤트
+        wells.forEach((well) => {
+            well.addEventListener('click', () => {
+                // 클릭 시점에 드래그 요소가 있고, 드래그가 끝났을 때만 처리
+                if (draggedElement && !isDragging && activeIndicator === 'redCabbage') {
+                    const solutionDiv = well.querySelector('.solution');
+                    const solutionStrength = solutionDiv.dataset.type; // 예: acid-strong, base-weak
+                    const wellPlate = document.getElementById('wellPlate');
+
+                    // 물방울 애니메이션 및 색 변화 처리
+                    
+                    const dropWater = (delay) => {
+                         setTimeout(() => {
+                            const drop = document.createElement('div');
+                            drop.classList.add('drop-animation');
+                            
+                            const wellRect = well.getBoundingClientRect();
+                            const wellPlateRect = wellPlate.getBoundingClientRect();
+                            const wellCenterX = wellRect.left + wellRect.width / 2;
+                            const wellCenterY = wellRect.top + wellRect.height / 2;
+
+                            drop.style.left = (wellCenterX - wellPlateRect.left) + 'px';
+                            // 물방울 크기를 고려한 시작 위치
+                            drop.style.top = (wellCenterY - wellPlateRect.top - 25) + 'px'; 
+
+                            wellPlate.appendChild(drop);
+
+                            drop.addEventListener('animationend', () => {
+                                drop.remove();
+                                if (delay === 100) { // 마지막 방울이 떨어질 때 용액 색상 변경
+                                    const finalColor = RED_CABBAGE_COLORS[solutionStrength];
+                                    if (finalColor) {
+                                        solutionDiv.style.backgroundColor = finalColor; 
+                                    }
+                                }
+                            });
+                        }, delay);
+                    };
+
+                    dropWater(0);   // 첫 번째 물방울
+                    dropWater(100); // 두 번째 물방울
+                    
+                    // 지시약 엘리먼트 제거
+                    draggedElement.remove(); 
+                    draggedElement = null; 
+                }
+            });
+        });
+
+        // 초기화 버튼 클릭 이벤트
+        resetBtn.addEventListener('click', () => {
+            document.querySelectorAll('.indicator-dropper').forEach(el => el.remove());
+            
+            solutions.forEach((solution, index) => {
+                solution.style.backgroundColor = initialSolutionColors[index];
+            });
+
+            activeIndicator = null;
+            draggedElement = null;
+            isDragging = false;
+            messageBox.textContent = '';
+        });
+    </script>
+</body>
+</html>
